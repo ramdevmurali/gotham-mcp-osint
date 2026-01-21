@@ -1,0 +1,18 @@
+# Core Agent Framework
+langgraph>=0.0.10
+langchain>=0.1.0
+langchain-openai  # Or your preferred LLM provider
+langchain-community
+
+# Database Driver
+neo4j>=5.15.0     # The official binary driver
+
+# Data Validation & Schema (CRITICAL)
+pydantic>=2.0.0
+
+# Tools & APIs
+tavily-python     # For OSINT search
+python-dotenv     # To load .env secrets
+
+# Model Context Protocol (MCP)
+mcp               # Official SDK
