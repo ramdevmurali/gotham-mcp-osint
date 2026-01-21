@@ -13,9 +13,6 @@ logger = logging.getLogger("tavily_search")
 
 # Initialize Client
 tavily_api_key = os.getenv("TAVILY_API_KEY")
-if not tavily_api_key:
-    # We don't raise an error immediately to allow import, but we warn
-    logger.warning("⚠️ TAVILY_API_KEY is missing in .env")
 
 class SearchResult(BaseModel):
     url: str
@@ -44,11 +41,10 @@ def perform_search(query: str, max_results: int = 3) -> list[dict]:
         
         results = []
         for result in response.get("results", []):
-            # We enforce a clean structure here
             results.append({
                 "url": result["url"],
                 "title": result["title"],
-                "content": result["content"][:2000]  # Limit context window usage
+                "content": result["content"][:2000]
             })
         
         logger.info(f"✅ Found {len(results)} results.")
@@ -57,12 +53,3 @@ def perform_search(query: str, max_results: int = 3) -> list[dict]:
     except Exception as e:
         logger.error(f"❌ Search failed: {e}")
         return []
-
-if __name__ == "__main__":
-    # Self-Test
-    print("--- Testing Tavily Search ---")
-    results = perform_search("latest developments in LangGraph 2024", max_results=1)
-    for r in results:
-        print(f"TITLE: {r['title']}")
-        print(f"URL:   {r['url']}")
-        print(f"SNIPPET: {r['content'][:100]}...")
