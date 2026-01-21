@@ -13,7 +13,7 @@ class Config:
     MAX_SEARCH_RESULTS = 3
     
     # Neo4j Configuration
-    NEO4J_URI = f"bolt://localhost:{os.getenv('NEO4J_BOLT_PORT', 7687)}"
+    NEO4J_URI = os.getenv("NEO4J_URI", f"bolt://localhost:{os.getenv('NEO4J_BOLT_PORT', 7687)}")
     NEO4J_USER = os.getenv("NEO4J_AUTH", "").split("/")[0]
     NEO4J_PASSWORD = os.getenv("NEO4J_AUTH", "").split("/")[1]
 

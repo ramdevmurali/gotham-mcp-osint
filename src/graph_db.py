@@ -1,7 +1,7 @@
-import os
 import logging
 from neo4j import GraphDatabase, Driver
 from dotenv import load_dotenv
+from src.config import Config
 
 # Load secrets immediately
 load_dotenv()
@@ -12,26 +12,27 @@ logger = logging.getLogger(__name__)
 
 class GraphManager:
     """
-    Singleton class to manage Neo4j connections and Schema constraints.
-    Ensures we don't leak connections or create duplicate entities.
+    Singleton class to manage Neo4j connections.
     """
     _instance = None
     
     def __new__(cls):
         if cls._instance is None:
+            # Standard Singleton implementation
             cls._instance = super(GraphManager, cls).__new__(cls)
             cls._instance._initialize()
         return cls._instance
 
     def _initialize(self):
-        uri = f"bolt://localhost:{os.getenv('NEO4J_BOLT_PORT', 7687)}"
-        user = os.getenv("NEO4J_AUTH", "").split("/")[0]
-        password = os.getenv("NEO4J_AUTH", "").split("/")[1]
+        # We read all connection parameters directly from the Config
+        uri = Config.NEO4J_URI
+        user = Config.NEO4J_USER
+        password = Config.NEO4J_PASSWORD
         
         try:
             self.driver: Driver = GraphDatabase.driver(uri, auth=(user, password))
             self.verify_connectivity()
-            logger.info("✅ Neo4j Connection Established.")
+            logger.info(f"✅ Connected to Neo4j: {uri}")
         except Exception as e:
             logger.error(f"❌ Failed to connect to Neo4j: {e}")
             raise e
@@ -46,28 +47,22 @@ class GraphManager:
 
     def setup_constraints(self):
         """
-        Idempotency is Law. 
-        We define constraints here to prevent duplicate nodes at the database level.
+        Apply Schema Constraints to ensure Data Integrity.
         """
         queries = [
-            # 1. Document Uniqueness (URL is the source of truth)
             "CREATE CONSTRAINT document_url_unique IF NOT EXISTS FOR (d:Document) REQUIRE d.url IS UNIQUE",
-            
-            # 2. Entity Uniqueness (Resolving by Name for now)
             "CREATE CONSTRAINT person_name_unique IF NOT EXISTS FOR (p:Person) REQUIRE p.name IS UNIQUE",
             "CREATE CONSTRAINT org_name_unique IF NOT EXISTS FOR (o:Organization) REQUIRE o.name IS UNIQUE",
             "CREATE CONSTRAINT loc_name_unique IF NOT EXISTS FOR (l:Location) REQUIRE l.name IS UNIQUE",
             "CREATE CONSTRAINT topic_name_unique IF NOT EXISTS FOR (t:Topic) REQUIRE t.name IS UNIQUE",
-            
-            # 3. Performance Indices (Faster lookups)
-            "CREATE INDEX person_name_index IF NOT EXISTS FOR (p:Person) ON (p.name)",
         ]
         
         with self.driver.session() as session:
             for q in queries:
                 try:
                     session.run(q)
-                    logger.info(f"Executed Constraint: {q.split('REQUIRE')[1].strip()}")
+                    # Simple logging for success
+                    logger.info(f"Executed Constraint: {q}")
                 except Exception as e:
                     logger.error(f"Failed to execute {q}: {e}")
 
