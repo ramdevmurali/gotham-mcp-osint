@@ -20,6 +20,7 @@ class GraphManager:
                 auth=(Config.NEO4J_USER, Config.NEO4J_PASSWORD)
             )
             self.driver.verify_connectivity()
+            self.setup_constraints()
         except Exception as e:
             logger.error(f"❌ DB Connection Failed: {e}")
             raise e
@@ -33,7 +34,10 @@ class GraphManager:
             "CREATE CONSTRAINT document_url_unique IF NOT EXISTS FOR (d:Document) REQUIRE d.url IS UNIQUE",
             "CREATE CONSTRAINT person_name_unique IF NOT EXISTS FOR (p:Person) REQUIRE p.name IS UNIQUE",
             "CREATE CONSTRAINT org_name_unique IF NOT EXISTS FOR (o:Organization) REQUIRE o.name IS UNIQUE",
+            "CREATE CONSTRAINT location_name_unique IF NOT EXISTS FOR (l:Location) REQUIRE l.name IS UNIQUE",
+            "CREATE CONSTRAINT topic_name_unique IF NOT EXISTS FOR (t:Topic) REQUIRE t.name IS UNIQUE",
             "CREATE FULLTEXT INDEX entity_name_index IF NOT EXISTS FOR (n:Person|Organization) ON EACH [n.name]",
+            "CREATE FULLTEXT INDEX entity_name_index_loc_topic IF NOT EXISTS FOR (n:Location|Topic) ON EACH [n.name]",
         ]
         with self.driver.session() as session:
             for q in queries:

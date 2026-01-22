@@ -6,10 +6,18 @@ from src.schema import KnowledgeGraphUpdate
 
 logger = logging.getLogger("graph_ops")
 
+_INDEX_BY_LABEL = {
+    "Person": "entity_name_index",
+    "Organization": "entity_name_index",
+    "Location": "entity_name_index_loc_topic",
+    "Topic": "entity_name_index_loc_topic",
+}
+
 def _find_fuzzy_match(session, name, label, threshold=0.6):
     """Internal helper to find matches."""
+    index = _INDEX_BY_LABEL.get(label, "entity_name_index")
     query = f"""
-    CALL db.index.fulltext.queryNodes("entity_name_index", $name + "~") YIELD node, score
+    CALL db.index.fulltext.queryNodes("{index}", $name + "~") YIELD node, score
     WHERE $label IN labels(node) AND score > $threshold
     RETURN node.name as name, score ORDER BY score DESC LIMIT 1
     """
@@ -80,8 +88,7 @@ def lookup_entity(name: str) -> str:
     """Read-only tool for Agent to check DB."""
     db = GraphManager()
     with db.driver.session() as session:
-        # Check both Person and Organization
-        for label in ["Person", "Organization"]:
+        for label in ["Person", "Organization", "Location", "Topic"]:
             match = _find_fuzzy_match(session, name, label, threshold=0.7)
             if match:
                 candidate = match["name"]

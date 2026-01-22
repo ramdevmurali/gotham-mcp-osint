@@ -2,6 +2,7 @@ import logging
 import uuid
 
 from fastapi import FastAPI, HTTPException
+from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel, Field
 
 from src.agent import run_agent
@@ -23,7 +24,7 @@ async def run_mission(req: MissionRequest):
     logger.info(f"Task: {req.task} | Thread: {req.thread_id}")
     
     try:
-        content = run_agent(req.task, thread_id=req.thread_id)
+        content = await run_in_threadpool(run_agent, req.task, req.thread_id)
 
         return {
             "result": content,
