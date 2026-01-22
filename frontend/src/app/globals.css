@@ -1,26 +1,127 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --ink: #f7f7f7;
+  --ink-muted: #f0d7d7;
+  --parchment: #b30000;
+  --parchment-2: #930000;
+  --copper: #ffffff;
+  --teal: #1a1a1a;
+  --gold: #f5f5f5;
+  --fog: rgba(255, 255, 255, 0.12);
+  --glow: rgba(255, 255, 255, 0.12);
+  --surface-ink: #b0000b;
+  --surface-muted: rgba(176, 0, 11, 0.7);
+  --surface-border: rgba(176, 0, 11, 0.18);
+}
+
+.theme-dark {
+  --ink: #f5f5f5;
+  --ink-muted: rgba(245, 245, 245, 0.7);
+  --parchment: #121212;
+  --parchment-2: #0b0b0b;
+  --copper: #f5f5f5;
+  --teal: #1a1a1a;
+  --gold: #1f1f1f;
+  --fog: rgba(255, 255, 255, 0.1);
+  --glow: rgba(225, 6, 0, 0.22);
+  --surface-ink: #f5f5f5;
+  --surface-muted: rgba(245, 245, 245, 0.7);
+  --surface-border: rgba(255, 255, 255, 0.12);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-background: var(--parchment);
+  --color-foreground: var(--ink);
+  --font-sans: var(--font-body);
+  --font-mono: var(--font-body);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: radial-gradient(900px 480px at 10% -20%, rgba(255, 255, 255, 0.08), transparent),
+    radial-gradient(900px 480px at 90% 0%, rgba(0, 0, 0, 0.12), transparent),
+    linear-gradient(180deg, var(--parchment) 0%, var(--parchment-2) 100%);
+  color: var(--ink);
+  font-family: var(--font-body), system-ui, sans-serif;
+}
+
+.page-shell {
+  min-height: 100vh;
+  position: relative;
+  overflow: hidden;
+}
+
+.grain {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140' viewBox='0 0 140 140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/></filter><rect width='140' height='140' filter='url(%23n)' opacity='0.12'/></svg>");
+  mix-blend-mode: multiply;
+  opacity: 0.25;
+}
+
+.float-glow {
+  position: absolute;
+  border-radius: 999px;
+  filter: blur(28px);
+  opacity: 0.5;
+  animation: drift 18s ease-in-out infinite;
+}
+
+.float-glow.one {
+  width: 260px;
+  height: 260px;
+  background: var(--glow);
+  top: -120px;
+  left: -80px;
+}
+
+.float-glow.two {
+  width: 360px;
+  height: 360px;
+  background: rgba(0, 0, 0, 0.15);
+  bottom: -200px;
+  right: -140px;
+  animation-delay: -6s;
+}
+
+@keyframes drift {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(18px, -12px, 0) scale(1.05);
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.reveal {
+  animation: rise 0.8s ease both;
+}
+
+.reveal.delay-1 {
+  animation-delay: 0.15s;
+}
+
+.reveal.delay-2 {
+  animation-delay: 0.3s;
+}
+
+.reveal.delay-3 {
+  animation-delay: 0.45s;
 }
