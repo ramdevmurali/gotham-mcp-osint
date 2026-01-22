@@ -6,7 +6,8 @@ from src.search import perform_search
 from src.graph_ops import insert_knowledge
 from src.schema import KnowledgeGraphUpdate
 import logging
-from langgraph.checkpoint.memory import MemorySaver # <--- NEW IMPORT
+from langgraph.checkpoint.memory import MemorySaver 
+from src.graph_ops import insert_knowledge, lookup_entity
 
 
 # Setup Logger
@@ -39,21 +40,27 @@ def save_to_graph(data: KnowledgeGraphUpdate):
     if isinstance(data, dict):
         data = KnowledgeGraphUpdate(**data)
     return insert_knowledge(data)
+@tool
+def check_graph(name: str):
+    """
+    Use this tool BEFORE saving to check if an entity already exists in the database.
+    Useful for preventing duplicates (e.g. checking if 'Bill Gates' already exists as 'William Gates').
+    """
+    return lookup_entity(name)
 
-# ... (Previous imports remain the same) ...
 from langgraph.checkpoint.memory import MemorySaver # <--- NEW IMPORT
 
-# ... (LLM and Tools setup remain the same) ...
 
 # 3. Create the Agent with Memory
-tools = [search_tavily, save_to_graph]
+tools = [search_tavily, save_to_graph, check_graph]
 
 system_prompt = """
 You are an Autonomous OSINT Agent. Your ONLY goal is to build a Knowledge Graph.
-1. You MUST search for information if you don't have it.
-2. You MUST use 'save_to_graph' to save every entity and relationship you find.
-3. DO NOT just summarize the findings in text. If you don't call 'save_to_graph', you have FAILED.
-4. When saving, be granular.
+
+1. SEARCH: Use 'search_tavily' to find information.
+2. CHECK: Before saving a person or company, use 'check_graph' to see if they already exist under a slightly different name.
+   - If you find "William Gates" in the DB, link to him instead of creating "Bill Gates".
+3. SAVE: Use 'save_to_graph' to persist the data.
 """
 
 # Initialize Memory (In-RAM persistence)
