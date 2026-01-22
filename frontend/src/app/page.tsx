@@ -48,7 +48,7 @@ export default function Home() {
               <button className="h-12 rounded-full bg-[var(--ink)] px-6 text-sm font-semibold text-[var(--parchment)] transition hover:-translate-y-0.5 hover:shadow-lg">
                 Launch a mission
               </button>
-              <button className="h-12 rounded-full border border-[var(--fog)] bg-white/70 px-6 text-sm font-semibold text-[var(--ink)] transition hover:-translate-y-0.5 hover:shadow-lg">
+              <button className="h-12 rounded-full border border-[var(--surface-border)] bg-[var(--surface-bg-soft)] px-6 text-sm font-semibold text-[var(--surface-ink)] transition hover:-translate-y-0.5 hover:shadow-lg">
                 View sample graph
               </button>
               <div className="text-xs font-semibold uppercase tracking-[0.3em] text-[var(--ink-muted)]">

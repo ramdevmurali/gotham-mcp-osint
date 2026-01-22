@@ -4,7 +4,7 @@ type MissionConsoleProps = {
 
 export default function MissionConsole({ highlights }: MissionConsoleProps) {
   return (
-    <div className="reveal delay-1 rounded-3xl border border-[var(--surface-border)] bg-white/95 p-6 text-[var(--surface-ink)] shadow-lg backdrop-blur">
+    <div className="reveal delay-1 rounded-3xl border border-[var(--surface-border)] bg-[var(--surface-bg)] p-6 text-[var(--surface-ink)] shadow-lg backdrop-blur">
       <div className="flex items-center justify-between">
         <div>
           <p className="text-xs uppercase tracking-[0.3em] text-[var(--surface-muted)]">
@@ -23,7 +23,7 @@ export default function MissionConsole({ highlights }: MissionConsoleProps) {
         <label className="text-xs uppercase tracking-[0.2em] text-[var(--surface-muted)]">
           Mission brief
         </label>
-        <div className="rounded-2xl border border-[var(--surface-border)] bg-white px-4 py-3 shadow-inner">
+        <div className="rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-bg-strong)] px-4 py-3 shadow-inner">
           <textarea
             className="h-36 w-full resize-none bg-transparent text-sm text-[var(--surface-ink)] outline-none"
             placeholder="Identify the current CEO of Delta Air Lines and the year the company was founded."
@@ -33,7 +33,7 @@ export default function MissionConsole({ highlights }: MissionConsoleProps) {
           <button className="h-11 rounded-full bg-[var(--surface-ink)] px-5 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:shadow-lg">
             Dispatch mission
           </button>
-          <button className="h-11 rounded-full border border-[var(--surface-border)] bg-white px-5 text-sm font-semibold text-[var(--surface-ink)]">
+          <button className="h-11 rounded-full border border-[var(--surface-border)] bg-[var(--surface-bg-strong)] px-5 text-sm font-semibold text-[var(--surface-ink)]">
             Save draft
           </button>
         </div>

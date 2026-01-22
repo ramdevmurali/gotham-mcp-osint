@@ -7,7 +7,7 @@ type FeatureCardProps = {
 export default function FeatureCard({ title, copy, delay }: FeatureCardProps) {
   return (
     <div
-      className={`reveal delay-${delay} rounded-3xl border border-[var(--surface-border)] bg-white/90 p-6 shadow-sm`}
+      className={`reveal delay-${delay} rounded-3xl border border-[var(--surface-border)] bg-[var(--surface-bg)] p-6 shadow-sm`}
     >
       <h3 className="font-[var(--font-display)] text-xl text-[var(--surface-ink)]">
         {title}

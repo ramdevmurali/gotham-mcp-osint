@@ -5,7 +5,7 @@ type StatCardProps = {
 
 export default function StatCard({ value, label }: StatCardProps) {
   return (
-    <div className="reveal delay-2 rounded-2xl border border-[var(--surface-border)] bg-white/90 p-4 shadow-sm backdrop-blur">
+    <div className="reveal delay-2 rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-bg)] p-4 shadow-sm backdrop-blur">
       <p className="font-[var(--font-display)] text-2xl text-[var(--surface-ink)]">
         {value}
       </p>
