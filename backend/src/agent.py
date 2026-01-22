@@ -15,16 +15,7 @@ from src.search import perform_search
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("gotham_agent")
 
-# 1. Initialize the LLM
-llm = ChatGoogleGenerativeAI(
-    model=Config.MODEL_NAME,
-    temperature=0,
-    max_retries=Config.LLM_MAX_RETRIES,
-    timeout=Config.LLM_TIMEOUT,
-    convert_system_message_to_human=True
-)
-
-# 2. Define Tools
+# 1. Define Tools
 @tool
 def search_tavily(query: str):
     """
@@ -64,17 +55,32 @@ RULES:
 4. **SOURCES:** If you rely on internal knowledge, use "Internal Knowledge" as the source_url in the save tool. Otherwise, use `search_tavily`.
 """
 # Initialize Memory (In-RAM persistence)
-memory = MemorySaver()
+_agent_executor = None
 
-# Pass the checkpointer to the agent
-agent_executor = create_react_agent(
-    llm, 
-    tools, 
-    prompt=system_prompt,
-    checkpointer=memory # <--- THIS ENABLES MEMORY
-)
+def _build_agent():
+    llm = ChatGoogleGenerativeAI(
+        model=Config.MODEL_NAME,
+        temperature=0,
+        max_retries=Config.LLM_MAX_RETRIES,
+        timeout=Config.LLM_TIMEOUT,
+        convert_system_message_to_human=True
+    )
+    memory = MemorySaver()
+    return create_react_agent(
+        llm,
+        tools,
+        prompt=system_prompt,
+        checkpointer=memory
+    )
+
+def get_agent_executor():
+    global _agent_executor
+    if _agent_executor is None:
+        _agent_executor = _build_agent()
+    return _agent_executor
 
 def run_agent(task: str, thread_id: str | None = None) -> str:
+    agent_executor = get_agent_executor()
     payload = {"messages": [("user", task)]}
     if thread_id:
         result = agent_executor.invoke(payload, config={"configurable": {"thread_id": thread_id}})
