@@ -1,3 +1,5 @@
+'use client';
+
 import MissionConsole from "@/components/layout/mission-console";
 import FeatureCard from "@/components/ui/feature-card";
 import Pill from "@/components/ui/pill";
@@ -5,8 +7,49 @@ import StatCard from "@/components/ui/stat-card";
 import StatusPill from "@/components/ui/status-pill";
 import ThemeToggle from "@/components/ui/theme-toggle";
 import { featureCards, missionHighlights, stats } from "@/lib/content";
+import { useState } from "react";
 
 export default function Home() {
+  const [sampleSummary, setSampleSummary] = useState<{
+    node_count: number;
+    edge_count: number;
+    sample_nodes: string[];
+    documents: { url?: string }[];
+  } | null>(null);
+  const [sampleLoading, setSampleLoading] = useState(false);
+  const [sampleError, setSampleError] = useState<string | null>(null);
+
+  const handleViewSample = async () => {
+    setSampleLoading(true);
+    setSampleError(null);
+    try {
+      const resp = await fetch(`/api/run-mission?doc_limit=6`);
+      if (!resp.ok) {
+        throw new Error(`Backend responded ${resp.status}`);
+      }
+      const data = await resp.json();
+      const names: string[] = [];
+      if (Array.isArray(data.nodes)) {
+        for (const node of data.nodes.slice(0, 6)) {
+          if (node && typeof node === "object" && "name" in node) {
+            const name = String((node as { name?: unknown }).name ?? "");
+            if (name) names.push(name);
+          }
+        }
+      }
+      setSampleSummary({
+        node_count: data.node_count ?? 0,
+        edge_count: data.edge_count ?? 0,
+        sample_nodes: names,
+        documents: Array.isArray(data.documents) ? data.documents : [],
+      });
+    } catch (err) {
+      setSampleError(err instanceof Error ? err.message : "Could not load graph sample");
+    } finally {
+      setSampleLoading(false);
+    }
+  };
+
   return (
     <div className="page-shell">
       <div className="float-glow one" />
@@ -48,13 +91,42 @@ export default function Home() {
               <button className="h-12 rounded-full bg-[var(--ink)] px-6 text-sm font-semibold text-[var(--parchment)] transition hover:-translate-y-0.5 hover:shadow-lg">
                 Launch a mission
               </button>
-              <button className="h-12 rounded-full border border-[var(--surface-border)] bg-[var(--surface-bg-soft)] px-6 text-sm font-semibold text-[var(--surface-ink)] transition hover:-translate-y-0.5 hover:shadow-lg">
-                View sample graph
+              <button
+                className="h-12 rounded-full border border-[var(--surface-border)] bg-[var(--surface-bg-soft)] px-6 text-sm font-semibold text-[var(--surface-ink)] transition hover:-translate-y-0.5 hover:shadow-lg disabled:opacity-60"
+                onClick={handleViewSample}
+                disabled={sampleLoading}
+              >
+                {sampleLoading ? "Loading..." : "View sample graph"}
               </button>
               <div className="text-xs font-semibold uppercase tracking-[0.3em] text-[var(--ink-muted)]">
                 Aura-ready • MCP tools • Neo4j
               </div>
             </div>
+            {sampleError ? (
+              <div className="reveal delay-3 rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-bg-soft)] px-4 py-3 text-sm text-[var(--ink)]">
+                {sampleError}
+              </div>
+            ) : null}
+            {sampleSummary ? (
+              <div className="reveal delay-3 rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-bg-soft)] px-4 py-3 text-sm text-[var(--ink)]">
+                <p className="text-xs uppercase tracking-[0.28em] text-[var(--ink-muted)]">
+                  Sample graph
+                </p>
+                <p className="mt-1 font-semibold">
+                  {sampleSummary.node_count} nodes · {sampleSummary.edge_count} edges
+                </p>
+                {sampleSummary.sample_nodes.length ? (
+                  <p className="mt-1 text-sm text-[var(--ink-muted)]">
+                    {sampleSummary.sample_nodes.join(" • ")}
+                  </p>
+                ) : null}
+                {sampleSummary.documents.length ? (
+                  <p className="mt-1 text-[var(--ink-muted)] text-xs">
+                    from {Math.min(sampleSummary.documents.length, 6)} recent sources
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
             <div className="grid gap-4 sm:grid-cols-3">
               {stats.map((stat) => (
                 <StatCard key={stat.label} value={stat.value} label={stat.label} />

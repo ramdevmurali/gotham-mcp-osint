@@ -94,3 +94,24 @@ export async function POST(request: Request) {
     );
   }
 }
+
+export async function GET(request: Request) {
+  const url = new URL(request.url);
+  const docLimit = url.searchParams.get("doc_limit") ?? "5";
+
+  const response = await fetch(
+    `${API_BASE}/graph/sample?doc_limit=${encodeURIComponent(docLimit)}`,
+    { method: "GET" },
+  );
+
+  const text = await response.text();
+  try {
+    const data = JSON.parse(text);
+    return NextResponse.json(data, { status: response.status });
+  } catch {
+    return NextResponse.json(
+      { nodes: [], edges: [], node_count: 0, edge_count: 0, documents: [], raw: text },
+      { status: response.status },
+    );
+  }
+}
