@@ -116,9 +116,6 @@ export default function Home() {
               </p>
             </div>
             <div className="reveal delay-3 flex flex-wrap items-center gap-4">
-              <button className="h-12 rounded-full bg-[var(--ink)] px-6 text-sm font-semibold text-[var(--parchment)] transition hover:-translate-y-0.5 hover:shadow-lg">
-                Launch a mission
-              </button>
               <button
                 className="h-12 rounded-full border border-[var(--surface-border)] bg-[var(--surface-bg-soft)] px-6 text-sm font-semibold text-[var(--surface-ink)] transition hover:-translate-y-0.5 hover:shadow-lg disabled:opacity-60"
                 onClick={handleViewSample}
