@@ -129,9 +129,6 @@ export default function MissionConsole({ highlights }: MissionConsoleProps) {
             New objective
           </h2>
         </div>
-        <span className="rounded-full bg-[var(--surface-ink)]/10 px-3 py-1 text-xs font-semibold text-[var(--surface-ink)]">
-          Thread: auto
-        </span>
       </div>
 
       <div className="mt-6 space-y-4">
@@ -153,9 +150,6 @@ export default function MissionConsole({ highlights }: MissionConsoleProps) {
             disabled={isLoading}
           >
             {isLoading ? "Dispatching..." : "Dispatch mission"}
-          </button>
-          <button className="h-11 rounded-full border border-[var(--surface-border)] bg-[var(--surface-bg-strong)] px-5 text-sm font-semibold text-[var(--surface-ink)]">
-            Save draft
           </button>
         </div>
       </div>
