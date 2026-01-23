@@ -58,11 +58,52 @@ export default function GraphPreview({ nodes, edges, height = 360 }: GraphPrevie
   }, []);
 
   const data = useMemo(() => {
+    // Deduplicate by (labels, lowercased trimmed name) to avoid duplicate concept nodes.
+    const nameKey = (n: GraphNode) => {
+        const labelSig = (n.labels ?? []).sort().join("|") || "None";
+        const norm = (n.name ?? "").trim().toLowerCase();
+        return `${labelSig}::${norm}`;
+    };
+    const nodeMap = new Map<string, GraphNode>();
+    for (const n of nodes) {
+      if (!n.name) continue;
+      const key = nameKey(n);
+      if (!nodeMap.has(key)) {
+        nodeMap.set(key, n);
+      }
+    }
+    const dedupedNodes = Array.from(nodeMap.values());
+
+    // Remap edges to canonical node ids based on deduped nodes.
+    const idByKey = new Map<string, string>();
+    for (const n of dedupedNodes) {
+      idByKey.set(nameKey(n), n.id);
+    }
+
+    const remappedEdges: GraphEdge[] = [];
+    for (const e of edges) {
+      // Find the node objects for the source/target ids in the original list.
+      const srcNode = nodes.find((n) => String(n.id) === String(e.source));
+      const tgtNode = nodes.find((n) => String(n.id) === String(e.target));
+      if (!srcNode || !tgtNode || !srcNode.name || !tgtNode.name) continue;
+      const srcKey = nameKey(srcNode);
+      const tgtKey = nameKey(tgtNode);
+      const srcCanonical = idByKey.get(srcKey);
+      const tgtCanonical = idByKey.get(tgtKey);
+      if (!srcCanonical || !tgtCanonical) continue;
+      if (srcCanonical === tgtCanonical) continue; // skip self after remap
+      remappedEdges.push({
+        ...e,
+        source: srcCanonical,
+        target: tgtCanonical,
+      });
+    }
+
     // cap to avoid perf blowups
     const maxNodes = 60;
-    const trimmedNodes = nodes.slice(0, maxNodes);
+    const trimmedNodes = dedupedNodes.slice(0, maxNodes);
     const allowedIds = new Set(trimmedNodes.map((n) => n.id));
-    const trimmedEdges = edges.filter(
+    const trimmedEdges = remappedEdges.filter(
       (e) => allowedIds.has(String(e.source)) && allowedIds.has(String(e.target)),
     );
     return { nodes: trimmedNodes, links: trimmedEdges };
