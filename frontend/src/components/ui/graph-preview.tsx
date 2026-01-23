@@ -1,7 +1,7 @@
 'use client';
 
 import dynamic from "next/dynamic";
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 // Use the 2D-only build to avoid AFRAME (VR) globals in the browser.
 const ForceGraph2D = dynamic(() => import("react-force-graph-2d"), { ssr: false });
@@ -44,6 +44,19 @@ const labelColor = (labels: string[] | undefined) => {
 };
 
 export default function GraphPreview({ nodes, edges, height = 360 }: GraphPreviewProps) {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [width, setWidth] = useState(680);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const observer = new ResizeObserver((entries) => {
+      const { width: w } = entries[0].contentRect;
+      setWidth(w);
+    });
+    observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, []);
+
   const data = useMemo(() => {
     // cap to avoid perf blowups
     const maxNodes = 60;
@@ -64,15 +77,22 @@ export default function GraphPreview({ nodes, edges, height = 360 }: GraphPrevie
   }
 
   return (
-    <div className="rounded-3xl border border-[var(--surface-border)] bg-[var(--surface-bg-soft)] p-3">
+    <div
+      ref={containerRef}
+      className="rounded-3xl border border-[var(--surface-border)] bg-[var(--surface-bg-soft)] p-3"
+    >
       <ForceGraph2D
-        width={undefined}
+        width={width}
         height={height}
         graphData={data}
         cooldownTicks={40}
         nodeRelSize={6}
         linkColor={() => "rgba(255,255,255,0.2)"}
         linkWidth={1}
+        enableZoomPanInteraction={true}
+        zoomToFit={false}
+        minZoom={0.6}
+        maxZoom={2.5}
         backgroundColor="transparent"
         nodeCanvasObject={(node, ctx, globalScale) => {
           const typed = node as GraphNode;
