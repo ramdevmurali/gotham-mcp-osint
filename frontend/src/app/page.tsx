@@ -7,8 +7,8 @@ import StatCard from "@/components/ui/stat-card";
 import StatusPill from "@/components/ui/status-pill";
 import ThemeToggle from "@/components/ui/theme-toggle";
 import GraphPreview from "@/components/ui/graph-preview";
-import { featureCards, missionHighlights, stats } from "@/lib/content";
-import { useState } from "react";
+import { featureCards, missionHighlights, stats as staticStats } from "@/lib/content";
+import { useEffect, useState } from "react";
 
 export default function Home() {
   const [sampleSummary, setSampleSummary] = useState<{
@@ -21,6 +21,29 @@ export default function Home() {
   const [sampleError, setSampleError] = useState<string | null>(null);
   const [graphNodes, setGraphNodes] = useState<any[]>([]);
   const [graphEdges, setGraphEdges] = useState<any[]>([]);
+  const [stats, setStats] = useState(staticStats);
+  const [statsError, setStatsError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadStats = async () => {
+      try {
+        const resp = await fetch("/api/graph-stats");
+        if (!resp.ok) throw new Error(`Stats fetch failed: ${resp.status}`);
+        const data = await resp.json();
+        setStats([
+          { value: String(data.entities ?? 0), label: "entities tracked" },
+          { value: String(data.sources ?? 0), label: "sources indexed" },
+          {
+            value: `${data.dedupe_confidence ?? 100}%`,
+            label: "dedupe confidence",
+          },
+        ]);
+      } catch (err) {
+        setStatsError(err instanceof Error ? err.message : "Could not load stats");
+      }
+    };
+    loadStats();
+  }, []);
 
   const handleViewSample = async () => {
     setSampleLoading(true);
@@ -140,6 +163,9 @@ export default function Home() {
                 <StatCard key={stat.label} value={stat.value} label={stat.label} />
               ))}
             </div>
+            {statsError ? (
+              <p className="text-xs text-[var(--ink-muted)]">{statsError}</p>
+            ) : null}
           </div>
 
           <MissionConsole highlights={missionHighlights} />

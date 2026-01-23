@@ -75,6 +75,46 @@ async def graph_sample(doc_limit: int = 5):
         logger.error(f"Graph sample error: {e}")
         raise HTTPException(status_code=500, detail="Graph sample failed")
 
+
+@app.get("/graph/stats")
+async def graph_stats():
+    """
+    Return aggregate stats for the graph (entities, sources, dedupe confidence).
+    """
+    db = GraphManager()
+
+    def query():
+        cypher = """
+        MATCH (n)
+        WHERE any(l IN labels(n) WHERE l IN ["Person","Organization","Location","Topic"])
+        WITH count(n) AS entity_count, count(distinct toLower(trim(n.name))) AS distinct_names
+        MATCH (d:Document)
+        RETURN entity_count AS entities,
+               count(d)    AS sources,
+               (CASE
+                    WHEN entity_count = 0 THEN 100
+                    ELSE round(100.0 * distinct_names / entity_count)
+               END) AS dedupe_confidence
+        """
+        with db.session() as session:
+            record = session.run(cypher).single()
+            if not record:
+                return {"entities": 0, "sources": 0, "dedupe_confidence": 100}
+            return {
+                "entities": record["entities"],
+                "sources": record["sources"],
+                "dedupe_confidence": record["dedupe_confidence"],
+            }
+
+    try:
+        data = await asyncio.wait_for(run_in_threadpool(query), timeout=8)
+        return data
+    except asyncio.TimeoutError:
+        raise HTTPException(status_code=504, detail="Graph stats timed out")
+    except Exception as e:
+        logger.error(f"Graph stats error: {e}")
+        raise HTTPException(status_code=500, detail="Graph stats failed")
+
 @app.post("/run-mission")
 async def run_mission(req: MissionRequest):
     logger.info(f"Task: {req.task} | Thread: {req.thread_id}")
