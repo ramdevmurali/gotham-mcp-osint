@@ -7,6 +7,7 @@ from fastapi.concurrency import run_in_threadpool
 from src.agent import run_agent
 from src.config import Config
 from src.routes.graph import get_competitors, entity_profile
+from src.graph_db import GraphManager
 
 logger = logging.getLogger("insight_service")
 
@@ -131,11 +132,99 @@ async def run_company_insight(company: str, thread_id: str | None):
     except Exception:
         profile_view = None
 
+    mood_view = None
+    try:
+        mood_view = await run_company_mood(company, thread_id)
+    except Exception as exc:  # pragma: no cover - best effort
+        logger.warning(f"mood fetch skipped: {exc}")
+
     return {
         "profile_result": profile_result,
         "competitor_result": competitor_result,
         "profile": profile_view,
         "competitors": competitors_list,
+        "mood": mood_view,
+    }
+
+
+# ---- Sentiment / mood -------------------------------------------------------
+
+
+def _extract_json_block(text: str) -> dict[str, Any] | None:
+    """Best-effort parse of first JSON object in a text blob."""
+    import json, re
+
+    try:
+        return json.loads(text)
+    except Exception:
+        pass
+
+    match = re.search(r"\{.*\}", text, re.DOTALL)
+    if match:
+        block = match.group(0)
+        try:
+            return json.loads(block)
+        except Exception:
+            return None
+    return None
+
+
+def _upsert_mood(company: str, label: str | None, score: float | None):
+    if label is None and score is None:
+        return
+    db = GraphManager()
+    with db.session() as session:
+        session.run(
+            """
+            MATCH (o:Organization)
+            WHERE toLower(o.name) = toLower($name)
+            SET o.mood_label = coalesce($label, o.mood_label),
+                o.mood_score = coalesce($score, o.mood_score),
+                o.mood_updated_at = timestamp()
+            """,
+            name=company,
+            label=label,
+            score=score,
+        )
+
+
+async def run_company_mood(company: str, thread_id: str | None):
+    """
+    Derive company mood from recent headlines; returns dict with label, score, headlines.
+    """
+    prompt = (
+        f"Fetch 3-5 recent news headlines about '{company}' (last 90 days). "
+        "Output JSON only with fields: mood_label (one of positive, neutral, negative), "
+        "mood_score (number between -1 and 1), headlines (array of {title, url}). "
+        "Keep the JSON short and no extra text."
+    )
+
+    raw = await asyncio.wait_for(
+        run_in_threadpool(run_agent, prompt, thread_id or ""),
+        timeout=Config.RUN_MISSION_TIMEOUT,
+    )
+
+    parsed = _extract_json_block(raw if isinstance(raw, str) else str(raw))
+    if not parsed or not isinstance(parsed, dict):
+        return {"label": None, "score": None, "headlines": [], "raw": raw}
+
+    label = parsed.get("mood_label") or parsed.get("label")
+    score = parsed.get("mood_score") or parsed.get("score")
+    headlines = parsed.get("headlines") or []
+    if not isinstance(headlines, list):
+        headlines = []
+
+    # upsert to graph (best effort)
+    try:
+        _upsert_mood(company, label, float(score) if score is not None else None)
+    except Exception as exc:  # pragma: no cover - best effort
+        logger.warning(f"mood upsert skipped: {exc}")
+
+    return {
+        "label": label,
+        "score": score,
+        "headlines": headlines[:5],
+        "raw": raw,
     }
 
 
