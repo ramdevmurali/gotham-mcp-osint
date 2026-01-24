@@ -13,6 +13,7 @@ from src.services.insight import (
     build_profile_prompt,
     filter_competitors,
     run_company_insight,
+    run_company_mood,
 )
 from src.routes.graph import get_competitors, entity_profile  # reuse for response enrichment
 
