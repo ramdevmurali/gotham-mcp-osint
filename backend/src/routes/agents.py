@@ -7,10 +7,20 @@ from pydantic import BaseModel, Field
 
 from src.agent import run_agent
 from src.config import Config
+from src.services.insight import (
+    build_competitor_prompt,
+    build_competitor_fallback_prompt,
+    build_profile_prompt,
+    filter_competitors,
+    run_company_insight,
+)
 from src.routes.graph import get_competitors, entity_profile  # reuse for response enrichment
 
 logger = logging.getLogger("agents")
 router = APIRouter()
+
+def _normalize_company(name: str) -> str:
+    return "".join(ch for ch in name.lower() if ch.isalnum() or ch.isspace()).strip()
 
 
 class MissionRequest(BaseModel):
@@ -68,15 +78,7 @@ async def competitor_scout(req: CompanyRequest):
     if not req.company:
         raise HTTPException(status_code=400, detail="company is required")
 
-    task = (
-        f"Find 3-5 close competitors for '{req.company}'. "
-        "For each competitor, give a one-line rationale and at least one source URL. "
-        "Create Organization nodes if needed and write COMPETES_WITH relationships from the target company "
-        "to each competitor, setting relationship properties reason and source_url. "
-        "Use save_to_graph with entities [{name: <company>, label: 'Organization'}, {name: <competitor>, label: 'Organization'}] "
-        "and relationships [{source: <company>, target: <competitor>, type: 'COMPETES_WITH', properties: {reason: <why>, source_url: <url>}}]. "
-        "Pick competitors from credible recent sources."
-    )
+    task = build_competitor_prompt(req.company)
 
     try:
         content = await asyncio.wait_for(
@@ -84,7 +86,17 @@ async def competitor_scout(req: CompanyRequest):
             timeout=Config.RUN_MISSION_TIMEOUT,
         )
         competitors = await get_competitors(req.company)
-        return {"result": content, "status": "success", "competitors": competitors["competitors"]}
+        competitors_list = filter_competitors(competitors.get("competitors", []))
+        if not competitors_list:
+            fallback_task = build_competitor_fallback_prompt(req.company)
+            await asyncio.wait_for(
+                run_in_threadpool(run_agent, fallback_task, req.thread_id or str(uuid.uuid4())),
+                timeout=Config.RUN_MISSION_TIMEOUT,
+            )
+            competitors = await get_competitors(req.company)
+            competitors_list = filter_competitors(competitors.get("competitors", []))
+
+        return {"result": content, "status": "success", "competitors": competitors_list}
     except asyncio.TimeoutError:
         raise HTTPException(status_code=504, detail="Competitor scout timed out")
     except Exception as e:
@@ -106,10 +118,7 @@ async def company_insight(req: CompanyRequest):
         "Cite at least 3 recent sources (title + URL) and save entities/relationships to the graph."
     )
     competitor_task = (
-        f"Find 3-5 close competitors for '{req.company}'. "
-        "For each competitor, give a one-line rationale and at least one source URL. "
-        "Create Organization nodes if needed and write COMPETES_WITH relationships from the target company "
-        "to each competitor, setting relationship properties reason and source_url."
+        build_competitor_prompt(req.company)
     )
 
     try:
@@ -122,6 +131,15 @@ async def company_insight(req: CompanyRequest):
             timeout=Config.RUN_MISSION_TIMEOUT,
         )
         competitors = await get_competitors(req.company)
+        competitors_list = filter_competitors(competitors.get("competitors", []))
+        if not competitors_list:
+            fallback_task = build_competitor_fallback_prompt(req.company)
+            await asyncio.wait_for(
+                run_in_threadpool(run_agent, fallback_task, req.thread_id or str(uuid.uuid4())),
+                timeout=Config.RUN_MISSION_TIMEOUT,
+            )
+            competitors = await get_competitors(req.company)
+            competitors_list = filter_competitors(competitors.get("competitors", []))
         try:
             profile_view = await entity_profile(req.company)
         except HTTPException:
@@ -132,7 +150,7 @@ async def company_insight(req: CompanyRequest):
             "profile_result": profile_result,
             "competitor_result": competitor_result,
             "profile": profile_view,
-            "competitors": competitors.get("competitors", []),
+            "competitors": competitors_list,
         }
     except asyncio.TimeoutError:
         raise HTTPException(status_code=504, detail="Company insight timed out")

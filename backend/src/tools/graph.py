@@ -78,6 +78,10 @@ def insert_knowledge(data: KnowledgeGraphUpdate) -> str:
             s_name = name_map.get(rel.source, rel.source)
             t_name = name_map.get(rel.target, rel.target)
 
+            # strip non-primitive props to satisfy Neo4j type constraints
+            props = rel.properties or {}
+            safe_props = {k: v for k, v in props.items() if isinstance(v, (str, int, float, bool)) or (isinstance(v, list) and all(isinstance(x, (str, int, float, bool)) for x in v))}
+
             session.run(
                 """
                 MATCH (d:Document {url: $url})
@@ -93,7 +97,7 @@ def insert_knowledge(data: KnowledgeGraphUpdate) -> str:
                 t=t_name,
                 url=data.source_url,
                 type=rel.type,
-                props=rel.properties,
+                props=safe_props,
             )
             count += 1
 

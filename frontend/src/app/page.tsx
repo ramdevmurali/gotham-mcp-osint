@@ -5,7 +5,6 @@ import Pill from "@/components/ui/pill";
 import StatCard from "@/components/ui/stat-card";
 import ThemeToggle from "@/components/ui/theme-toggle";
 import GraphPreview from "@/components/ui/graph-preview";
-import CompanyProfile from "@/components/ui/company-profile";
 import { missionHighlights, stats as staticStats } from "@/lib/content";
 import { useEffect, useState } from "react";
 
@@ -18,8 +17,8 @@ export default function Home() {
   } | null>(null);
   const [sampleLoading, setSampleLoading] = useState(false);
   const [sampleError, setSampleError] = useState<string | null>(null);
-  const [graphNodes, setGraphNodes] = useState<any[]>([]);
-  const [graphEdges, setGraphEdges] = useState<any[]>([]);
+  const [graphNodes, setGraphNodes] = useState<unknown[]>([]);
+  const [graphEdges, setGraphEdges] = useState<unknown[]>([]);
   const [showGraph, setShowGraph] = useState(false);
   const [stats, setStats] = useState(staticStats);
   const [statsError, setStatsError] = useState<string | null>(null);
@@ -168,10 +167,6 @@ export default function Home() {
           </div>
 
           <MissionConsole highlights={missionHighlights.slice(0, 1)} />
-        </section>
-
-        <section className="grid gap-6">
-          <CompanyProfile />
         </section>
 
       </main>

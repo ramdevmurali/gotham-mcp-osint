@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import re
 from fastapi import APIRouter, HTTPException
 from fastapi.concurrency import run_in_threadpool
 
@@ -7,6 +8,55 @@ from src.graph_db import GraphManager
 
 logger = logging.getLogger("graph")
 router = APIRouter()
+
+
+# -- helpers ---------------------------------------------------------------
+
+
+_CORP_SUFFIXES = re.compile(r"\b(inc|inc\.|ltd|ltd\.|corp|corp\.|co|co\.|company|companies|group|ag|sa|plc|nv)\b",
+                            re.IGNORECASE)
+
+
+def _canonical_company_name(name: str) -> str:
+    """Lightweight canonicalizer to improve match hit-rate without renaming nodes."""
+    name = name.strip()
+    # Remove common suffixes but keep internal words intact
+    name = _CORP_SUFFIXES.sub("", name)
+    # Collapse repeated spaces
+    name = re.sub(r"\s+", " ", name).strip()
+    return name or name
+
+
+def _find_company_node(session, company: str):
+    """Try exact, normalized, then full-text match; return the node or None."""
+    candidates = [company]
+    norm = _canonical_company_name(company)
+    if norm.lower() != company.lower():
+        candidates.append(norm)
+
+    for cand in candidates:
+        rec = session.run(
+            "MATCH (c:Organization) WHERE toLower(c.name) = toLower($name) RETURN c LIMIT 1",
+            name=cand,
+        ).single()
+        if rec:
+            return rec["c"]
+
+    for cand in candidates:
+        rec = session.run(
+            """
+            CALL db.index.fulltext.queryNodes("entity_name_index", $q + "~")
+            YIELD node, score
+            WHERE 'Organization' IN labels(node)
+            RETURN node, score
+            ORDER BY score DESC LIMIT 1
+            """,
+            q=cand,
+        ).single()
+        if rec:
+            return rec["node"]
+
+    return None
 
 
 @router.get("/graph/sample")
@@ -60,17 +110,20 @@ async def get_competitors(company: str):
     db = GraphManager()
 
     def query():
-        cypher = """
-        MATCH (c:Organization)
-        WHERE toLower(c.name) = toLower($company)
-        MATCH (c)-[r:RELATED {type:'COMPETES_WITH'}]->(o:Organization)
-        RETURN o.name AS competitor, r.reason AS reason, r.source_url AS source
-        ORDER BY o.name
-        """
         with db.session() as session:
+            node = _find_company_node(session, company)
+            if not node:
+                return []
+
+            cypher = """
+            MATCH (c:Organization {name: $name})
+            MATCH (c)-[r:RELATED {type:'COMPETES_WITH'}]->(o:Organization)
+            RETURN o.name AS competitor, r.reason AS reason, r.source_url AS source
+            ORDER BY o.name
+            """
             return [
                 {"competitor": rec["competitor"], "reason": rec["reason"], "source": rec["source"]}
-                for rec in session.run(cypher, {"company": company})
+                for rec in session.run(cypher, {"name": node["name"]})
             ]
 
     try:
@@ -152,12 +205,14 @@ async def entity_profile(name: str):
     def query():
         cypher = """
         CALL {
-            MATCH (e) WHERE toLower(e.name) = toLower($name)
+            WITH $name AS q
+            MATCH (e) WHERE toLower(e.name) = toLower(q)
             RETURN e, 1.0 AS score
             UNION
-            CALL db.index.fulltext.queryNodes("entity_name_index", $name + "~") YIELD node, score
+            WITH $name AS q
+            CALL db.index.fulltext.queryNodes("entity_name_index", q + "~") YIELD node, score
             RETURN node AS e, score
-        }
+        } 
         WITH e, score ORDER BY score DESC LIMIT 1
         OPTIONAL MATCH (e)<-[m:MENTIONS]-(d:Document)
         OPTIONAL MATCH (e)-[r:RELATED]-(n)
