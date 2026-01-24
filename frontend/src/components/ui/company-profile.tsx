@@ -12,53 +12,39 @@ type Profile = {
 
 type Competitor = { competitor: string; reason?: string; source?: string };
 
+type Insight = {
+  profile?: Profile | null;
+  competitors?: Competitor[];
+  profile_result?: unknown;
+  competitor_result?: unknown;
+  status?: string;
+};
+
 export default function CompanyProfile() {
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [competitors, setCompetitors] = useState<Competitor[]>([]);
-  const [loadingComp, setLoadingComp] = useState(false);
+  const [insight, setInsight] = useState<Insight | null>(null);
 
-  const fetchProfile = async () => {
-    if (!name.trim()) return;
+  const runInsight = async () => {
+    const target = name.trim();
+    if (!target) return;
     setLoading(true);
     setError(null);
-    setProfile(null);
-    setCompetitors([]);
+    setInsight(null);
     try {
-      const res = await fetch(`/api/graph-profile?name=${encodeURIComponent(name)}`);
-      if (!res.ok) throw new Error(`Profile failed: ${res.status}`);
-      const data = (await res.json()) as Profile;
-      setProfile(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Profile failed");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const runCompetitors = async () => {
-    const target = profile?.name || name.trim();
-    if (!target) return;
-    setLoadingComp(true);
-    setError(null);
-    try {
-      // Trigger agent to fetch and write competitors
-      await fetch("/api/agents/competitors", {
+      const res = await fetch("/api/agents/company-insight", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ company: target }),
       });
-      // Then read from graph
-      const res = await fetch(`/api/graph-competitors?company=${encodeURIComponent(target)}`);
-      if (!res.ok) throw new Error(`Competitors failed: ${res.status}`);
-      const data = (await res.json()) as { competitors?: Competitor[] };
-      setCompetitors(data.competitors ?? []);
+      if (!res.ok) throw new Error(`Insight failed: ${res.status}`);
+      const data = (await res.json()) as Insight;
+      setInsight(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Competitors failed");
+      setError(err instanceof Error ? err.message : "Insight failed");
     } finally {
-      setLoadingComp(false);
+      setLoading(false);
     }
   };
 
@@ -67,26 +53,19 @@ export default function CompanyProfile() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
         <input
           className="w-full rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-bg-strong)] px-4 py-2 text-sm text-[var(--surface-ink)] outline-none"
-          placeholder="Search company (e.g., Siemens AG)"
+          placeholder="Enter company (e.g., Siemens AG)"
           value={name}
           onChange={(e) => setName(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === "Enter") fetchProfile();
+            if (e.key === "Enter") runInsight();
           }}
         />
         <button
           className="h-10 rounded-full bg-[var(--surface-ink)] px-4 text-xs font-semibold text-white transition hover:-translate-y-0.5 hover:shadow-lg disabled:opacity-60"
-          onClick={fetchProfile}
-          disabled={loading}
+          onClick={runInsight}
+          disabled={loading || !name.trim()}
         >
-          {loading ? "Loading..." : "View profile"}
-        </button>
-        <button
-          className="h-10 rounded-full border border-[var(--surface-border)] bg-[var(--surface-bg-strong)] px-4 text-xs font-semibold text-[var(--surface-ink)] transition hover:-translate-y-0.5 hover:shadow-lg disabled:opacity-60"
-          onClick={runCompetitors}
-          disabled={loadingComp || (!profile && !name.trim())}
-        >
-          {loadingComp ? "Finding..." : "View competitors"}
+          {loading ? "Running..." : "Run company insight"}
         </button>
       </div>
 
@@ -96,15 +75,15 @@ export default function CompanyProfile() {
         </div>
       ) : null}
 
-      {profile ? (
+      {insight?.profile ? (
         <div className="mt-4 space-y-3">
           <div>
             <p className="text-[0.65rem] uppercase tracking-[0.28em] text-[var(--surface-muted)]">Profile</p>
-            <p className="text-lg font-semibold">{profile.name}</p>
-            <p className="text-xs text-[var(--surface-muted)]">{profile.labels?.join(" • ")}</p>
+            <p className="text-lg font-semibold">{insight.profile.name}</p>
+            <p className="text-xs text-[var(--surface-muted)]">{insight.profile.labels?.join(" • ")}</p>
           </div>
           <div className="grid gap-2 text-sm text-[var(--surface-ink)]">
-            {Object.entries(profile.properties || {})
+            {Object.entries(insight.profile.properties || {})
               .filter(([k]) => k !== "name")
               .slice(0, 6)
               .map(([k, v]) => (
@@ -114,11 +93,11 @@ export default function CompanyProfile() {
                 </div>
               ))}
           </div>
-          {profile.related?.length ? (
+          {insight.profile.related?.length ? (
             <div>
               <p className="text-[0.65rem] uppercase tracking-[0.28em] text-[var(--surface-muted)]">Related</p>
               <div className="flex flex-wrap gap-2 text-sm">
-                {profile.related.slice(0, 8).map((r, idx) => (
+                {insight.profile.related.slice(0, 8).map((r, idx) => (
                   <span
                     key={`${r.name}-${idx}`}
                     className="rounded-full bg-[var(--surface-bg-strong)] px-3 py-1 text-[var(--surface-ink)]"
@@ -129,11 +108,11 @@ export default function CompanyProfile() {
               </div>
             </div>
           ) : null}
-          {profile.sources?.length ? (
+          {insight.profile.sources?.length ? (
             <div className="space-y-1">
               <p className="text-[0.65rem] uppercase tracking-[0.28em] text-[var(--surface-muted)]">Sources</p>
               <ul className="space-y-1 text-sm">
-                {profile.sources.slice(0, 4).map((s, idx) => (
+                {insight.profile.sources.slice(0, 4).map((s, idx) => (
                   <li key={idx} className="truncate text-[var(--surface-ink)]">
                     {s.url}
                   </li>
@@ -144,11 +123,11 @@ export default function CompanyProfile() {
         </div>
       ) : null}
 
-      {competitors.length ? (
+      {insight?.competitors?.length ? (
         <div className="mt-4 space-y-2">
           <p className="text-[0.65rem] uppercase tracking-[0.28em] text-[var(--surface-muted)]">Competitors</p>
           <ul className="space-y-2 text-sm text-[var(--surface-ink)]">
-            {competitors.map((c, idx) => (
+            {insight.competitors.map((c, idx) => (
               <li key={`${c.competitor}-${idx}`}>
                 <span className="font-semibold">{c.competitor}</span>
                 {c.reason ? ` — ${c.reason}` : ""}

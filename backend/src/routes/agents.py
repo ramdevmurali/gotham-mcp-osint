@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 
 from src.agent import run_agent
 from src.config import Config
-from src.routes.graph import get_competitors  # reuse for response enrichment
+from src.routes.graph import get_competitors, entity_profile  # reuse for response enrichment
 
 logger = logging.getLogger("agents")
 router = APIRouter()
@@ -91,3 +91,51 @@ async def competitor_scout(req: CompanyRequest):
         logger.error(f"Competitor scout error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+
+@router.post("/agents/company-insight")
+async def company_insight(req: CompanyRequest):
+    """
+    One-shot company insight: profile + competitors, then return current graph view.
+    """
+    if not req.company:
+        raise HTTPException(status_code=400, detail="company is required")
+
+    profile_task = (
+        f"Profile the company '{req.company}'. "
+        "Return canonical name, HQ/country, founded year, and 3 key executives with roles. "
+        "Cite at least 3 recent sources (title + URL) and save entities/relationships to the graph."
+    )
+    competitor_task = (
+        f"Find 3-5 close competitors for '{req.company}'. "
+        "For each competitor, give a one-line rationale and at least one source URL. "
+        "Create Organization nodes if needed and write COMPETES_WITH relationships from the target company "
+        "to each competitor, setting relationship properties reason and source_url."
+    )
+
+    try:
+        profile_result = await asyncio.wait_for(
+            run_in_threadpool(run_agent, profile_task, req.thread_id or str(uuid.uuid4())),
+            timeout=Config.RUN_MISSION_TIMEOUT,
+        )
+        competitor_result = await asyncio.wait_for(
+            run_in_threadpool(run_agent, competitor_task, req.thread_id or str(uuid.uuid4())),
+            timeout=Config.RUN_MISSION_TIMEOUT,
+        )
+        competitors = await get_competitors(req.company)
+        try:
+            profile_view = await entity_profile(req.company)
+        except HTTPException:
+            profile_view = None
+
+        return {
+            "status": "success",
+            "profile_result": profile_result,
+            "competitor_result": competitor_result,
+            "profile": profile_view,
+            "competitors": competitors.get("competitors", []),
+        }
+    except asyncio.TimeoutError:
+        raise HTTPException(status_code=504, detail="Company insight timed out")
+    except Exception as e:
+        logger.error(f"Company insight error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
