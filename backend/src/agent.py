@@ -41,7 +41,7 @@ def _build_agent():
         llm,
         tools,
         prompt=system_prompt,
-        checkpointer=memory
+        checkpointer=memory,
     )
 
 def get_agent_executor():
