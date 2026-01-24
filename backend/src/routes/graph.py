@@ -151,8 +151,14 @@ async def entity_profile(name: str):
 
     def query():
         cypher = """
-        MATCH (e)
-        WHERE toLower(e.name) = toLower($name)
+        CALL {
+            MATCH (e) WHERE toLower(e.name) = toLower($name)
+            RETURN e, 1.0 AS score
+            UNION
+            CALL db.index.fulltext.queryNodes("entity_name_index", $name + "~") YIELD node, score
+            RETURN node AS e, score
+        }
+        WITH e, score ORDER BY score DESC LIMIT 1
         OPTIONAL MATCH (e)<-[m:MENTIONS]-(d:Document)
         OPTIONAL MATCH (e)-[r:RELATED]-(n)
         RETURN e,
