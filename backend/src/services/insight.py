@@ -209,8 +209,9 @@ async def run_company_mood(company: str, thread_id: str | None):
         "Keep the JSON short and no extra text."
     )
 
+    mood_thread = thread_id or f"mood-{company}"
     raw = await asyncio.wait_for(
-        run_in_threadpool(run_agent, prompt, thread_id or ""),
+        run_in_threadpool(run_agent, prompt, mood_thread),
         timeout=min(Config.RUN_MISSION_TIMEOUT, 20),
     )
 
