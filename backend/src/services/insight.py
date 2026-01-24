@@ -137,6 +137,7 @@ async def run_company_insight(company: str, thread_id: str | None):
         mood_view = await run_company_mood(company, thread_id)
     except Exception as exc:  # pragma: no cover - best effort
         logger.warning(f"mood fetch skipped: {exc}")
+        mood_view = {"label": None, "score": None, "headlines": [], "raw": None}
 
     return {
         "profile_result": profile_result,
@@ -201,7 +202,7 @@ async def run_company_mood(company: str, thread_id: str | None):
 
     raw = await asyncio.wait_for(
         run_in_threadpool(run_agent, prompt, thread_id or ""),
-        timeout=Config.RUN_MISSION_TIMEOUT,
+        timeout=min(Config.RUN_MISSION_TIMEOUT, 20),
     )
 
     parsed = _extract_json_block(raw if isinstance(raw, str) else str(raw))
