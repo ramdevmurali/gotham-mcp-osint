@@ -9,6 +9,8 @@ import { missionHighlights, stats as staticStats } from "@/lib/content";
 import { useEffect, useState } from "react";
 import { fetchJson } from "@/lib/fetcher";
 
+const SAMPLE_DOC_LIMIT = 5;
+
 type GraphSample = {
   nodes?: unknown[];
   edges?: unknown[];
@@ -59,13 +61,13 @@ export default function Home() {
     setSampleLoading(true);
     setSampleError(null);
     try {
-      const { response, data } = await fetchJson<GraphSample>(`/api/run-mission?doc_limit=5`);
+      const { response, data } = await fetchJson<GraphSample>(`/api/run-mission?doc_limit=${SAMPLE_DOC_LIMIT}`);
       if (!response.ok) {
         throw new Error(`Backend responded ${response.status}`);
       }
       const names: string[] = [];
       if (Array.isArray(data.nodes)) {
-        for (const node of data.nodes.slice(0, 5)) {
+        for (const node of data.nodes.slice(0, SAMPLE_DOC_LIMIT)) {
           if (node && typeof node === "object" && "name" in node) {
             const name = String((node as { name?: unknown }).name ?? "");
             if (name) names.push(name);

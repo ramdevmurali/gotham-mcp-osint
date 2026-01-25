@@ -3,6 +3,9 @@
 import { useState } from "react";
 import { fetchJson } from "@/lib/fetcher";
 
+const COMPETITOR_DISPLAY_CAP = 4;
+const MOOD_DRIVERS_DISPLAY_CAP = 2;
+
 type InsightPayload = {
   status?: string;
   profile?: {
@@ -190,7 +193,7 @@ export default function MissionConsole({ highlights }: MissionConsoleProps) {
               {activeTab === "competitors" ? (
                 insight.competitors?.length ? (
                   <ul className="space-y-2 text-sm text-[var(--surface-ink)]">
-                    {(showAllCompetitors ? insight.competitors : insight.competitors.slice(0, 3)).map((c, idx) => {
+                    {(showAllCompetitors ? insight.competitors : insight.competitors.slice(0, COMPETITOR_DISPLAY_CAP)).map((c, idx) => {
                       const reason =
                         !showAllCompetitors && c.reason && c.reason.length > 140
                           ? `${c.reason.slice(0, 140)}…`
@@ -210,7 +213,7 @@ export default function MissionConsole({ highlights }: MissionConsoleProps) {
                         </li>
                       );
                     })}
-                    {insight.competitors.length > 3 ? (
+                    {insight.competitors.length > COMPETITOR_DISPLAY_CAP ? (
                       <li>
                         <button
                           className="text-xs uppercase tracking-[0.2em] text-[var(--surface-muted)] underline"
@@ -237,12 +240,12 @@ export default function MissionConsole({ highlights }: MissionConsoleProps) {
                     </p>
                     {mood.drivers?.length ? (
                       <ul className="list-disc space-y-1 pl-5 text-xs text-[var(--surface-muted)]">
-                        {(showAllDrivers ? mood.drivers : mood.drivers.slice(0, 2)).map((driver, idx) => (
+                        {(showAllDrivers ? mood.drivers : mood.drivers.slice(0, MOOD_DRIVERS_DISPLAY_CAP)).map((driver, idx) => (
                           <li key={`${driver}-${idx}`}>{driver}</li>
                         ))}
                       </ul>
                     ) : null}
-                    {mood.drivers && mood.drivers.length > 2 ? (
+                    {mood.drivers && mood.drivers.length > MOOD_DRIVERS_DISPLAY_CAP ? (
                       <button
                         className="text-xs uppercase tracking-[0.2em] text-[var(--surface-muted)] underline"
                         onClick={() => setShowAllDrivers((prev) => !prev)}
