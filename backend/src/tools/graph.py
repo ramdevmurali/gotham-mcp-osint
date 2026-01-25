@@ -54,6 +54,27 @@ def resolve_entity(session, name, label):
     return name
 
 
+def _is_primitive(val) -> bool:
+    return isinstance(val, (str, int, float, bool))
+
+
+def _sanitize_props(props: dict | None) -> dict:
+    """Keep only primitives or lists of primitives; drop everything else."""
+    if not props:
+        return {}
+
+    safe = {}
+    for key, value in props.items():
+        if _is_primitive(value):
+            safe[key] = value
+        elif isinstance(value, list):
+            filtered = [v for v in value if _is_primitive(v)]
+            if filtered:
+                safe[key] = filtered
+        # ignore dicts/objects/other types
+    return safe
+
+
 def insert_knowledge(data: KnowledgeGraphUpdate) -> str:
     db = GraphManager()
     logger.info(f"Ingesting: {data.source_url}")
@@ -67,10 +88,11 @@ def insert_knowledge(data: KnowledgeGraphUpdate) -> str:
         for entity in data.entities:
             final_name = resolve_entity(session, entity.name, entity.label)
             name_map[entity.name] = final_name
+            safe_entity_props = _sanitize_props(entity.properties)
             session.run(
                 f"MERGE (e:{entity.label} {{name: $name}}) ON CREATE SET e += $props ON MATCH SET e += $props",
                 name=final_name,
-                props=entity.properties,
+                props=safe_entity_props,
             )
 
         count = 0
@@ -78,9 +100,7 @@ def insert_knowledge(data: KnowledgeGraphUpdate) -> str:
             s_name = name_map.get(rel.source, rel.source)
             t_name = name_map.get(rel.target, rel.target)
 
-            # strip non-primitive props to satisfy Neo4j type constraints
-            props = rel.properties or {}
-            safe_props = {k: v for k, v in props.items() if isinstance(v, (str, int, float, bool)) or (isinstance(v, list) and all(isinstance(x, (str, int, float, bool)) for x in v))}
+            safe_props = _sanitize_props(rel.properties)
 
             session.run(
                 """
