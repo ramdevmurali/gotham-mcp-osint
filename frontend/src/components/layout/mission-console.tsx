@@ -95,7 +95,8 @@ export default function MissionConsole({ highlights }: MissionConsoleProps) {
 
       await Promise.all([insightPromise, moodPromise]);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Mission failed");
+      const friendly = err instanceof Error ? err.message : "Temporary error, please retry";
+      setError(friendly);
     } finally {
       setIsLoading(false);
     }

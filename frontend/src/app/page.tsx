@@ -83,8 +83,9 @@ export default function Home() {
       setGraphNodes(Array.isArray(data.nodes) ? data.nodes : []);
       setGraphEdges(Array.isArray(data.edges) ? data.edges : []);
       setShowGraph(true);
-    } catch (err) {
-      setSampleError(err instanceof Error ? err.message : "Could not load graph sample");
+    } catch {
+      // Keep any prior graph visible; only show a friendly message.
+      setSampleError("Could not load graph sample. Please retry.");
     } finally {
       setSampleLoading(false);
     }
