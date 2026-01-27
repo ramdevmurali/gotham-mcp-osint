@@ -78,4 +78,4 @@ cd frontend && npm run lint
 - New graph views: add to `backend/src/routes/graph.py`.
 - Frontend: reuse `frontend/src/lib/fetcher.ts` and `frontend/src/lib/constants.ts` for new calls and caps.
 - Tools: `backend/src/tools/graph.py` handles sanitized graph writes; `backend/src/tools/search.py` wraps Tavily search. Typically no changes needed when adding agents unless adding new tool types.
-- MCP: Agents integrate MCP tools via LangGraph; extend by wiring additional tools in `src/agent.py` and exposing via routes as needed.
+- MCP: Add tools under `backend/src/tools/`, register them in `backend/src/server.py` (FastMCP), and wire into `src/agent.py`/routes as needed.
