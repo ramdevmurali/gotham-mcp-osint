@@ -74,4 +74,5 @@ cd frontend && npm run lint
 - New agents: add to `backend/src/routes/agents.py` (and services) via LangGraph.
 - New graph views: add to `backend/src/routes/graph.py`.
 - Frontend: reuse `frontend/src/lib/fetcher.ts` and `frontend/src/lib/constants.ts` for new calls and caps.
-
+- Tools: `backend/src/tools/graph.py` handles sanitized graph writes; typically no changes needed when adding agents.
+- MCP: Agents integrate MCP tools via LangGraph; extend by wiring additional tools in `src/agent.py` and exposing via routes as needed.
