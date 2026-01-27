@@ -23,6 +23,7 @@ Turn open-source signals into a living knowledge graph (Neo4j). Submit a company
 - Graph write sanitization (primitives only) to avoid Neo4j type errors.
 - Shared caps/constants to keep UI/server aligned (sample doc limit, competitor cap, mood drivers).
 - Skeleton loaders, concise errors, and partial-data resilience.
+- MCP server (`backend/src/server.py`) exposes graph ingest and Tavily search as tools for agents.
 
 ## Running locally
 Backend
