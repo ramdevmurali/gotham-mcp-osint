@@ -64,11 +64,10 @@ cd frontend && npm run lint
 - MOOD_DRIVERS_DISPLAY_CAP: 2
 - Mood fetch is opt-in (reduces latency).
 
-## Demo (add your media)
-- Mission console – competitors view (Dyson): _insert image link_
-- Mission console – mood view (Dyson): _insert image link_
-- Sample graph preview: _insert image link_
-- Optional video link (YouTube/Loom): _insert link_
+## Demo
+- Mission console – competitors view (Dyson): ![Competitors](https://raw.githubusercontent.com/ramdevmurali/neo4j-osint-console/main/docs/images/Competeitors.png)
+- Mission console – mood view (Dyson): ![Mood](https://raw.githubusercontent.com/ramdevmurali/neo4j-osint-console/main/docs/images/Mood.png)
+- Sample graph preview: ![Graph](https://raw.githubusercontent.com/ramdevmurali/neo4j-osint-console/main/docs/images/Graph.png)
 
 ## Known limitations
 - Dependent on LLM output quality and network latency.
