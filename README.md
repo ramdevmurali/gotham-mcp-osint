@@ -10,10 +10,8 @@ Turn open-source signals into a living knowledge graph (Neo4j). Submit a company
 ## Architecture
 ```
 [Next.js UI]
-   ↓ (API proxies)
-[FastAPI routes]
-   ↓
-[LangGraph orchestrator] --(rate limited + sanitized)--> [Neo4j]
+   ↓ (API proxies → FastAPI)
+[LangGraph orchestrator] --(rate limited + sanitized writes)--> [Neo4j]
    ↑                                     ↓
  (LLM: Gemini)                  Graph views (stats/sample/competitors)
 ```
@@ -24,8 +22,11 @@ Turn open-source signals into a living knowledge graph (Neo4j). Submit a company
 - Shared caps/constants to keep UI/server aligned (sample doc limit, competitor cap, mood drivers).
 - Skeleton loaders, concise errors, and partial-data resilience.
 - MCP server (`backend/src/server.py`) exposes graph ingest and Tavily search as tools for agents.
+- Quick demo flow: enter a company → dispatch mission → view competitors/mood → open sample graph.
 
 ## Running locally
+Prereqs: Python 3.11+, Node 18+
+
 Backend
 ```bash
 cd backend
@@ -42,13 +43,14 @@ npm run dev -- --hostname 0.0.0.0 --port 3000
 ```
 
 ## Docker
-- Backend: `docker build -t gotham-backend ./backend`
-- Frontend: `docker build -t gotham-frontend ./frontend`
+- Backend: `docker build -t gotham-backend ./backend` (listens on 8000)
+- Frontend: `docker build -t gotham-frontend ./frontend` (runs `npm start` for prod build on 3000)
 - (Add docker-compose if you want a single `docker compose up`.)
 
 ## Env
 - Backend `.env`: LLM keys, Neo4j URI/user/pass.
-- Frontend proxies to backend at `http://localhost:8000` (see `frontend/src/app/api/*`).
+- Frontend proxies to backend at `http://localhost:8000` by default (see `frontend/src/app/api/*`). Override via `API_BASE` in those routes if needed.
+- Data sources: LLM search via Gemini + Tavily; bring your own API keys.
 
 ## Tests & lint
 ```bash
@@ -75,5 +77,5 @@ cd frontend && npm run lint
 - New agents: add to `backend/src/routes/agents.py` (and services) via LangGraph.
 - New graph views: add to `backend/src/routes/graph.py`.
 - Frontend: reuse `frontend/src/lib/fetcher.ts` and `frontend/src/lib/constants.ts` for new calls and caps.
-- Tools: `backend/src/tools/graph.py` handles sanitized graph writes; typically no changes needed when adding agents.
+- Tools: `backend/src/tools/graph.py` handles sanitized graph writes; `backend/src/tools/search.py` wraps Tavily search. Typically no changes needed when adding agents unless adding new tool types.
 - MCP: Agents integrate MCP tools via LangGraph; extend by wiring additional tools in `src/agent.py` and exposing via routes as needed.
